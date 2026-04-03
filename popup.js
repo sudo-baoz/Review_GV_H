@@ -1,16 +1,7 @@
 // ============================================================
-// DEBUG — Check chrome API availability
+// STATE — Module-level state for the last successful fill
 // ============================================================
-(function debugChrome() {
-  console.log('chrome:', typeof chrome);
-  console.log('chrome.storage:', typeof chrome?.storage);
-  console.log('chrome.storage.local:', typeof chrome?.storage?.local);
-  console.log('chrome.runtime:', typeof chrome?.runtime);
-  console.log('chrome.runtime.lastError:', chrome?.runtime?.lastError);
-  if (typeof chrome === 'undefined' || !chrome.storage) {
-    document.body.innerHTML = '<div style="padding:20px;font-family:sans-serif;color:red;">Lỗi: chrome API không khả dụng.<br><br>Nguyên nhân có thể:<br>1. Extension chưa được reload — vào chrome://extensions bấm Reload<br>2. File popup.js bị lỗi syntax phía trên<br>3. Manifest không đúng version (phải là manifest v3)</div>';
-  }
-})();
+let lastResult = null; // { questions, scores, timestamp }
 
 // ============================================================
 // DOM REFERENCES
@@ -19,158 +10,67 @@ const apiKeyInput = document.getElementById('apiKeyInput');
 const saveKeyBtn = document.getElementById('saveKeyBtn');
 const keySavedBadge = document.getElementById('keySavedBadge');
 const testKeyBtn = document.getElementById('testKeyBtn');
+const historySelect = document.getElementById('historySelect');
+const historyCount = document.getElementById('historyCount');
+const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 const reviewTextarea = document.getElementById('reviewText');
-const startBtn = document.getElementById('startBtn');
-const statusBox = document.getElementById('statusBox');
 const charCount = document.getElementById('charCount');
+const clearTextBtn = document.getElementById('clearTextBtn');
+const startBtn = document.getElementById('startBtn');
+const exportBtn = document.getElementById('exportBtn');
+const statusBox = document.getElementById('statusBox');
+const downloadLink = document.getElementById('downloadLink');
+
+// Section toggles
+const sectionApi = document.getElementById('sectionApi');
+const sectionHistory = document.getElementById('sectionHistory');
+const sectionAction = document.getElementById('sectionAction');
 
 // ============================================================
-// STORAGE — Uses chrome.storage.local with key 'apiKey'
+// STORAGE KEYS
 // ============================================================
-const STORAGE_KEY = 'apiKey';
+const STORAGE_API_KEY = 'apiKey';
+const STORAGE_HISTORY = 'reviewHistory';
 
-// Load API key from storage
+// ============================================================
+// DEBUG — Check chrome API availability
+// ============================================================
+(function debugChrome() {
+  if (typeof chrome === 'undefined' || !chrome.storage) {
+    document.body.innerHTML = '<div style="padding:20px;font-family:sans-serif;color:red;">Lỗi: chrome API không khả dụng.<br>Bấm Reload ở chrome://extensions/</div>';
+  }
+})();
+
+// ============================================================
+// STORAGE HELPERS
+// ============================================================
 async function getApiKey() {
   try {
-    const result = await chrome.storage.local.get(STORAGE_KEY);
-    console.log('[Storage] getApiKey() result:', result);
-    const key = result[STORAGE_KEY] || '';
-    console.log('[Storage] Loaded API Key:', key ? `${key.substring(0, 8)}...` : '(empty)');
-    return key;
+    const result = await chrome.storage.local.get(STORAGE_API_KEY);
+    return result[STORAGE_API_KEY] || '';
   } catch (err) {
-    console.error('[Storage] getApiKey() error:', err);
+    console.error('[Storage] getApiKey error:', err);
     return '';
   }
 }
 
-// Save API key to storage
 async function saveApiKey(key) {
+  await chrome.storage.local.set({ [STORAGE_API_KEY]: key.trim() });
+}
+
+async function getHistory() {
   try {
-    await chrome.storage.local.set({ [STORAGE_KEY]: key.trim() });
-    console.log('[Storage] saveApiKey() success for key:', key.substring(0, 8) + '...');
+    const result = await chrome.storage.local.get(STORAGE_HISTORY);
+    return result[STORAGE_HISTORY] || [];
   } catch (err) {
-    console.error('[Storage] saveApiKey() error:', err);
-    throw err;
+    console.error('[Storage] getHistory error:', err);
+    return [];
   }
 }
 
-// ============================================================
-// INIT — Load saved key on popup open
-// ============================================================
-async function init() {
-  console.log('[Init] Popup opening...');
-  try {
-    const savedKey = await getApiKey();
-    if (savedKey) {
-      console.log('[Init] Found saved key, auto-filling input');
-      apiKeyInput.value = savedKey;
-      setKeySavedState(true);
-    } else {
-      console.log('[Init] No saved key found, input is empty');
-    }
-  } catch (err) {
-    console.error('[Init] init() error:', err);
-  }
+async function saveHistory(history) {
+  await chrome.storage.local.set({ [STORAGE_HISTORY]: history });
 }
-
-// ============================================================
-// SAVE KEY BUTTON
-// ============================================================
-saveKeyBtn.addEventListener('click', async () => {
-  console.log('[SaveBtn] Clicked');
-  const key = apiKeyInput.value.trim();
-
-  if (!key) {
-    console.log('[SaveBtn] Empty input, showing error');
-    showStatus('Vui lòng nhập API key trước khi lưu.', 'error');
-    return;
-  }
-
-  // Show saving state
-  saveKeyBtn.dataset.state = 'saving';
-  saveKeyBtn.disabled = true;
-
-  try {
-    console.log('[SaveBtn] Saving key:', key.substring(0, 8) + '...');
-    await saveApiKey(key);
-    console.log('API Key saved successfully');
-
-    // Show saved state
-    saveKeyBtn.dataset.state = 'saved';
-    saveKeyBtn.disabled = false;
-    setKeySavedState(true);
-    showStatus('Đã lưu API key thành công!', 'success');
-
-    // Revert to idle after 2 seconds
-    setTimeout(() => {
-      saveKeyBtn.dataset.state = 'idle';
-      setKeySavedState(true);
-    }, 2000);
-  } catch (err) {
-    console.error('[SaveBtn] Save failed:', err);
-    saveKeyBtn.dataset.state = 'idle';
-    saveKeyBtn.disabled = false;
-    showStatus(`Lỗi khi lưu: ${err.message}`, 'error');
-  }
-});
-
-// ============================================================
-// TEST API KEY BUTTON
-// ============================================================
-testKeyBtn.addEventListener('click', async () => {
-  console.log('[TestBtn] Clicked');
-
-  const savedKey = await getApiKey();
-  const inputKey = apiKeyInput.value.trim();
-  // Prefer input value over saved, fall back to saved if input is empty
-  const apiKey = inputKey || savedKey;
-
-  if (!apiKey) {
-    console.log('[TestBtn] No key found, showing error');
-    showStatus('Vui lòng nhập và lưu API key trước.', 'error');
-    return;
-  }
-
-  console.log('[TestBtn] Testing key:', apiKey.substring(0, 8) + '...');
-
-  // Set loading state
-  testKeyBtn.disabled = true;
-  testKeyBtn.classList.add('testing');
-  testKeyBtn.classList.remove('valid', 'invalid');
-  clearStatus();
-
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: 'Hi' }] }] }),
-      }
-    );
-
-    console.log('[TestBtn] Response status:', response.status);
-
-    if (response.ok) {
-      testKeyBtn.classList.remove('testing');
-      testKeyBtn.classList.add('valid');
-      showStatus('API Key hợp lệ!', 'success');
-    } else {
-      testKeyBtn.classList.remove('testing');
-      testKeyBtn.classList.add('invalid');
-      const errBody = await response.text();
-      console.log('[TestBtn] Error response:', errBody.substring(0, 100));
-      showStatus(`API Key không hợp lệ hoặc hết hạn (HTTP ${response.status})`, 'error');
-    }
-  } catch (err) {
-    testKeyBtn.classList.remove('testing');
-    testKeyBtn.classList.add('invalid');
-    console.error('[TestBtn] Network error:', err);
-    showStatus(`Không thể kết nối: ${err.message}`, 'error');
-  } finally {
-    testKeyBtn.disabled = false;
-  }
-});
 
 // ============================================================
 // UI HELPERS
@@ -190,15 +90,16 @@ function setLoading(loading) {
 function setKeySavedState(saved) {
   if (saved) {
     saveKeyBtn.classList.add('saved');
+    saveKeyBtn.dataset.state = 'saved';
     if (keySavedBadge) keySavedBadge.classList.add('visible');
   } else {
     saveKeyBtn.classList.remove('saved');
+    saveKeyBtn.dataset.state = 'idle';
     if (keySavedBadge) keySavedBadge.classList.remove('visible');
   }
 }
 
 function showStatus(msg, type = 'info') {
-  console.log(`[Status] [${type}] ${msg}`);
   statusBox.textContent = msg;
   statusBox.className = `status-box ${type}`;
 }
@@ -208,13 +109,74 @@ function clearStatus() {
   statusBox.textContent = '';
 }
 
-// Character counter
-reviewTextarea.addEventListener('input', () => {
-  charCount.textContent = reviewTextarea.value.length;
-});
+function setExportEnabled(enabled) {
+  exportBtn.disabled = !enabled;
+}
 
 // ============================================================
-// STEP 1: Scrape questions from active tab
+// COLLAPSIBLE SECTIONS
+// ============================================================
+function setupSectionToggles() {
+  [sectionApi, sectionHistory, sectionAction].forEach((btn) => {
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!expanded));
+    });
+  });
+}
+
+// ============================================================
+// HISTORY MANAGEMENT
+// ============================================================
+async function loadHistoryUI() {
+  const history = await getHistory();
+
+  // Populate dropdown
+  historySelect.innerHTML = '<option value="">— Chọn nhận xét đã lưu —</option>';
+  history.forEach((item, idx) => {
+    const preview = item.text.length > 60 ? item.text.substring(0, 60) + '...' : item.text;
+    const date = new Date(item.timestamp).toLocaleDateString('vi-VN');
+    const option = document.createElement('option');
+    option.value = String(idx);
+    option.textContent = `${date} — ${preview}`;
+    historySelect.appendChild(option);
+  });
+
+  // Update badge
+  if (history.length > 0) {
+    historyCount.textContent = history.length;
+    historyCount.style.display = 'inline';
+    clearHistoryBtn.disabled = false;
+  } else {
+    historyCount.style.display = 'none';
+    clearHistoryBtn.disabled = true;
+  }
+}
+
+async function addToHistory(reviewText) {
+  const history = await getHistory();
+
+  // Deduplication: skip if exact match already exists
+  const exists = history.some((h) => h.text === reviewText);
+  if (exists) return;
+
+  // Keep only the last 20 items
+  history.unshift({ text: reviewText, timestamp: Date.now() });
+  if (history.length > 20) history.length = 20;
+
+  await saveHistory(history);
+  await loadHistoryUI();
+}
+
+async function clearHistory() {
+  await saveHistory([]);
+  await loadHistoryUI();
+  showStatus('Đã xóa lịch sử nhận xét.', 'info');
+}
+
+// ============================================================
+// SCRAPE QUESTIONS — Returns full question data for export
 // ============================================================
 async function scrapeQuestions(tabId) {
   const results = await chrome.scripting.executeScript({
@@ -222,14 +184,18 @@ async function scrapeQuestions(tabId) {
     func: () => {
       const questions = [];
       const tables = document.querySelectorAll('.table-cauhoi');
-      tables.forEach((table) => {
+      tables.forEach((table, index) => {
         const strong = table.querySelector('strong');
         if (!strong) return;
         const radio = table.querySelector('input[type="radio"]');
         if (!radio) return;
         const match = radio.id.match(/^cauhoi(\d+)dapan\d+$/);
         if (!match) return;
-        questions.push({ id: match[1], text: strong.textContent.trim() });
+        questions.push({
+          id: match[1],
+          text: strong.textContent.trim(),
+          order: index + 1,
+        });
       });
       return questions;
     },
@@ -238,20 +204,14 @@ async function scrapeQuestions(tabId) {
 }
 
 // ============================================================
-// STEP 2: Call Gemini LLM API with defensive JSON parsing
+// LLM API CALL
 // ============================================================
 async function callLLM(apiKey, userReview, questions) {
   const questionsList = questions.map((q) => `${q.id}. ${q.text}`).join('\n');
 
-  const prompt = `Bạn là hệ thống phân tích NLP chuyên dụng. Nhiệm vụ của bạn là đánh giá nhận xét của sinh viên và chấm điểm các tiêu chí từ 1-5 (1: Rất không hài lòng, 5: Rất hài lòng).
-QUY TẮC TỐI THƯỢNG:
-1. Nếu tiêu chí KHÔNG được nhắc đến trong nhận xét, MẶC ĐỊNH CHỌN 4 ĐIỂM.
-2. KHÔNG giải thích. KHÔNG thêm text. KHÔNG dùng markdown.
-3. TRẢ VỀ DUY NHẤT 1 OBJECT JSON ĐÚNG CHUẨN.
-Danh sách tiêu chí:
-${questionsList}
-Nhận xét: '${userReview}'
-Cấu trúc bắt buộc (Ví dụ): {"1850": 5, "1851": 4}`;
+  const prompt = `Bạn là hệ thống NLP. Đánh giá nhận xét: '${userReview}' và chấm điểm tiêu chí 1-5 (1: Rất không hài lòng, 5: Rất hài lòng). Nếu không nhắc đến, mặc định 4.
+Danh sách: ${questionsList}.
+Trả về DUY NHẤT 1 OBJECT JSON: {"ID": Score}.`;
 
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
@@ -311,7 +271,7 @@ Cấu trúc bắt buộc (Ví dụ): {"1850": 5, "1851": 4}`;
 }
 
 // ============================================================
-// STEP 3: Fill the form in the target page
+// FILL FORM — Angular-safe radio button selection
 // ============================================================
 async function fillForm(tabId, scores) {
   const results = await chrome.scripting.executeScript({
@@ -331,6 +291,7 @@ async function fillForm(tabId, scores) {
           errors.push(`ID ${questionId}: không tìm thấy radio "${radioId}"`);
           continue;
         }
+        // Angular bypass: use click() + dispatchEvent()
         radio.click();
         radio.dispatchEvent(new Event('change', { bubbles: true }));
         radio.dispatchEvent(new Event('input', { bubbles: true }));
@@ -344,29 +305,60 @@ async function fillForm(tabId, scores) {
 }
 
 // ============================================================
-// MAIN: Orchestrate the full workflow
+// EXPORT CSV — Download results as CSV file
+// ============================================================
+function exportCSV(questions, scores) {
+  const scoreLabels = { 1: 'Rất không hài lòng', 2: 'Không hài lòng', 3: 'Phân vân', 4: 'Hài lòng', 5: 'Rất hài lòng' };
+
+  // BOM for UTF-8 Vietnamese
+  const BOM = '\uFEFF';
+  const rows = [
+    ['STT', 'ID Câu hỏi', 'Nội dung câu hỏi', 'Điểm', 'Mức độ'],
+  ];
+
+  questions.forEach((q) => {
+    const score = parseInt(scores[q.id], 10);
+    rows.push([
+      q.order,
+      q.id,
+      `"${q.text.replace(/"/g, '""')}"`,
+      isNaN(score) ? '' : score,
+      scoreLabels[score] || '',
+    ]);
+  });
+
+  const csvContent = BOM + rows.map((row) => row.join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const timestamp = new Date().toISOString().slice(0, 10);
+
+  downloadLink.href = URL.createObjectURL(blob);
+  downloadLink.download = `ket_qua_danh_gia_${timestamp}.csv`;
+  downloadLink.click();
+  URL.revokeObjectURL(downloadLink.href);
+
+  showStatus(`Đã xuất file CSV (${questions.length} câu).`, 'success');
+}
+
+// ============================================================
+// MAIN WORKFLOW
 // ============================================================
 startBtn.addEventListener('click', async () => {
-  console.log('[Main] Start button clicked');
   const userReview = reviewTextarea.value.trim();
 
   if (!userReview) {
-    console.log('[Main] Empty review, showing error');
     showStatus('Vui lòng nhập nhận xét trước khi bắt đầu.', 'error');
     return;
   }
 
-  // Fetch the latest key from storage
   const apiKey = await getApiKey();
-  console.log('[Main] API Key from storage:', apiKey ? `${apiKey.substring(0, 8)}...` : '(empty)');
-
   if (!apiKey) {
-    console.log('[Main] No API key in storage, showing error');
     showStatus('Chưa có API key. Vui lòng nhập và lưu Gemini API key trước.', 'error');
     return;
   }
 
   setLoading(true);
+  setExportEnabled(false);
+  lastResult = null;
   clearStatus();
   showStatus('Đang scrape câu hỏi từ form...', 'info');
 
@@ -375,18 +367,24 @@ startBtn.addEventListener('click', async () => {
     if (!tab?.id) throw new Error('Không tìm thấy tab hoạt động.');
 
     const questions = await scrapeQuestions(tab.id);
-    console.log('[Main] Scraped questions:', questions.length);
     if (!questions.length) {
       throw new Error('Không tìm thấy câu hỏi nào. Hãy đảm bảo bạn đang ở trang form đánh giá.');
     }
     showStatus(`Tìm thấy ${questions.length} câu hỏi. Đang gọi AI...`, 'info');
 
     const scores = await callLLM(apiKey, userReview, questions);
-    console.log('[Main] LLM returned scores:', scores);
     showStatus('Nhận kết quả từ AI. Đang điền form...', 'info');
 
     const result = await fillForm(tab.id, scores);
-    console.log('[Main] Fill result:', result);
+
+    // Save to history on success
+    if (result.filled > 0) {
+      await addToHistory(userReview);
+    }
+
+    // Store result for export
+    lastResult = { questions, scores, timestamp: Date.now() };
+    setExportEnabled(true);
 
     if (result.errors.length && result.filled === 0) {
       showStatus(`Lỗi: ${result.errors[0]}`, 'error');
@@ -404,6 +402,154 @@ startBtn.addEventListener('click', async () => {
 });
 
 // ============================================================
-// BOOT
+// EXPORT BUTTON
 // ============================================================
+exportBtn.addEventListener('click', () => {
+  if (!lastResult) {
+    showStatus('Chưa có kết quả để xuất. Hãy chạy "Điền form" trước.', 'warning');
+    return;
+  }
+  exportCSV(lastResult.questions, lastResult.scores);
+});
+
+// ============================================================
+// SAVE KEY BUTTON
+// ============================================================
+saveKeyBtn.addEventListener('click', async () => {
+  const key = apiKeyInput.value.trim();
+  if (!key) {
+    showStatus('Vui lòng nhập API key trước khi lưu.', 'error');
+    return;
+  }
+
+  saveKeyBtn.dataset.state = 'saving';
+  saveKeyBtn.disabled = true;
+
+  try {
+    await saveApiKey(key);
+    saveKeyBtn.dataset.state = 'saved';
+    setKeySavedState(true);
+    showStatus('Đã lưu API key thành công!', 'success');
+
+    setTimeout(() => {
+      saveKeyBtn.dataset.state = 'idle';
+      setKeySavedState(true);
+    }, 2000);
+  } catch (err) {
+    saveKeyBtn.dataset.state = 'idle';
+    saveKeyBtn.disabled = false;
+    showStatus(`Lỗi khi lưu: ${err.message}`, 'error');
+  } finally {
+    saveKeyBtn.disabled = false;
+  }
+});
+
+// ============================================================
+// TEST KEY BUTTON
+// ============================================================
+testKeyBtn.addEventListener('click', async () => {
+  const savedKey = await getApiKey();
+  const inputKey = apiKeyInput.value.trim();
+  const apiKey = inputKey || savedKey;
+
+  if (!apiKey) {
+    showStatus('Vui lòng nhập và lưu API key trước.', 'error');
+    return;
+  }
+
+  testKeyBtn.disabled = true;
+  testKeyBtn.classList.add('testing');
+  testKeyBtn.classList.remove('valid', 'invalid');
+  clearStatus();
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: 'Hi' }] }] }),
+      }
+    );
+
+    if (response.ok) {
+      testKeyBtn.classList.remove('testing');
+      testKeyBtn.classList.add('valid');
+      showStatus('API Key hợp lệ!', 'success');
+    } else {
+      testKeyBtn.classList.remove('testing');
+      testKeyBtn.classList.add('invalid');
+      showStatus(`API Key không hợp lệ hoặc hết hạn (HTTP ${response.status})`, 'error');
+    }
+  } catch (err) {
+    testKeyBtn.classList.remove('testing');
+    testKeyBtn.classList.add('invalid');
+    showStatus(`Không thể kết nối: ${err.message}`, 'error');
+  } finally {
+    testKeyBtn.disabled = false;
+  }
+});
+
+// ============================================================
+// HISTORY SELECT — Auto-fill textarea on selection
+// ============================================================
+historySelect.addEventListener('change', async () => {
+  const idx = parseInt(historySelect.value, 10);
+  if (isNaN(idx) || idx < 0) return;
+
+  const history = await getHistory();
+  if (history[idx]) {
+    reviewTextarea.value = history[idx].text;
+    charCount.textContent = reviewTextarea.value.length;
+    clearTextBtn.style.display = reviewTextarea.value ? 'inline-flex' : 'none';
+  }
+
+  // Reset dropdown
+  historySelect.value = '';
+});
+
+// ============================================================
+// CLEAR HISTORY BUTTON
+// ============================================================
+clearHistoryBtn.addEventListener('click', async () => {
+  await clearHistory();
+});
+
+// ============================================================
+// TEXTAREA EVENTS
+// ============================================================
+reviewTextarea.addEventListener('input', () => {
+  charCount.textContent = reviewTextarea.value.length;
+  clearTextBtn.style.display = reviewTextarea.value ? 'inline-flex' : 'none';
+});
+
+clearTextBtn.addEventListener('click', () => {
+  reviewTextarea.value = '';
+  charCount.textContent = '0';
+  clearTextBtn.style.display = 'none';
+});
+
+// ============================================================
+// INIT — Load saved key + history on popup open
+// ============================================================
+async function init() {
+  console.log('[Init] Popup opening...');
+
+  // Setup collapsible sections
+  setupSectionToggles();
+
+  // Load API key
+  const savedKey = await getApiKey();
+  if (savedKey) {
+    apiKeyInput.value = savedKey;
+    setKeySavedState(true);
+  }
+
+  // Load history
+  await loadHistoryUI();
+
+  // Export button starts disabled
+  setExportEnabled(false);
+}
+
 init();

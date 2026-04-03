@@ -1,18 +1,24 @@
-// ============================================================
-// CONTENT SCRIPT — Runs in the context of the target page
-// Handles DOM scraping and Angular-safe form filling
-// ============================================================
-
 /**
- * Scrape all evaluation questions from the page.
- * Finds .table-cauhoi tables, extracts text from <strong>,
- * and parses question ID from radio input IDs.
+ * CONTENT SCRIPT — Reference document
+ *
+ * This file is NOT registered as a content script in manifest.json.
+ * The scraping and filling logic runs inline via chrome.scripting.executeScript()
+ * in popup.js. This file is kept for reference and documentation.
+ *
+ * Angular compatibility: Always use element.click() + dispatchEvent() instead of
+ * setting element.checked = true directly.
  */
+
+// ============================================================
+// SCRAPE QUESTIONS
+// Extracts all questions from .table-cauhoi elements
+// Returns: Array<{ id: string, text: string, order: number }>
+// ============================================================
 function scrapeQuestions() {
   const questions = [];
   const tables = document.querySelectorAll('.table-cauhoi');
 
-  tables.forEach((table) => {
+  tables.forEach((table, index) => {
     const strong = table.querySelector('strong');
     if (!strong) return;
 
@@ -26,18 +32,19 @@ function scrapeQuestions() {
     questions.push({
       id: match[1],
       text: strong.textContent.trim(),
+      order: index + 1,
     });
   });
 
   return questions;
 }
 
-/**
- * Fill radio buttons based on scores from LLM response.
- * Uses click() + dispatchEvent() to properly trigger Angular's
- * two-way binding instead of just setting checked = true.
- * @param {Object} scores - { questionId: score (1-5), ... }
- */
+// ============================================================
+// FILL FORM
+// Selects radio buttons based on LLM scores
+// Input: { questionId: score (1-5), ... }
+// Returns: { filled, total, errors }
+// ============================================================
 function fillForm(scores) {
   let filled = 0;
   const errors = [];
@@ -50,8 +57,7 @@ function fillForm(scores) {
       continue;
     }
 
-    // Construct the radio button ID from question ID + score
-    // e.g. questionId=1850, score=4 -> "cauhoi1850dapan4"
+    // Construct radio ID: questionId=1850, score=4 -> "cauhoi1850dapan4"
     const radioId = `cauhoi${questionId}dapan${s}`;
     const radio = document.getElementById(radioId);
 
@@ -60,10 +66,8 @@ function fillForm(scores) {
       continue;
     }
 
-    // Trigger Angular's two-way binding via click()
+    // Angular bypass: trigger two-way binding via click() + events
     radio.click();
-
-    // Dispatch events as fallback for Angular change detection
     radio.dispatchEvent(new Event('change', { bubbles: true }));
     radio.dispatchEvent(new Event('input', { bubbles: true }));
 

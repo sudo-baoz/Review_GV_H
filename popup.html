@@ -6,7 +6,10 @@
 </head>
 <body>
   <div class="container">
-    <!-- Header -->
+
+    <!-- ═══════════════════════════════════════════════════
+         HEADER
+    ═══════════════════════════════════════════════════ -->
     <header class="header">
       <div class="header-icon">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -19,74 +22,158 @@
       </div>
     </header>
 
-    <!-- API Key Section -->
-    <div class="api-key-section">
-      <div class="section-label">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    <!-- ═══════════════════════════════════════════════════
+         SECTION 1: API CONFIGURATION (Collapsible)
+    ═══════════════════════════════════════════════════ -->
+    <section class="section">
+      <button class="section-toggle" id="sectionApi" aria-expanded="true">
+        <span class="section-toggle__label">
+          <svg class="section-toggle__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          Cấu hình API
+        </span>
+        <svg class="section-toggle__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
         </svg>
-        Gemini API Key
-        <span id="keySavedBadge" class="key-badge">Đã lưu</span>
-      </div>
-      <div class="api-key-row">
-        <input
-          type="password"
-          id="apiKeyInput"
-          placeholder="AIzaSy..."
-          autocomplete="off"
-          spellcheck="false"
-        >
-        <button id="saveKeyBtn" class="btn-save" data-state="idle">
-          <svg class="btn-save__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-            <polyline points="17 21 17 13 7 13 7 21"/>
-            <polyline points="7 3 7 8 15 8"/>
-          </svg>
-          <svg class="btn-save__check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          <span class="btn-save__text">Lưu</span>
-        </button>
-      </div>
-      <div class="api-key-actions">
-        <button id="testKeyBtn" class="btn-test">
-          <svg id="testIcon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-          </svg>
-          <span id="testBtnText">Kiểm tra key</span>
-          <svg id="testSpinner" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:none" class="spin">
-            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-          </svg>
-        </button>
-      </div>
-    </div>
+      </button>
 
-    <!-- Textarea -->
-    <div class="textarea-wrapper">
-      <textarea
-        id="reviewText"
-        placeholder="Nhập nhận xét của bạn về giảng viên...&#10;&#10;Ví dụ: Giảng viên nhiệt tình, giảng bài dễ hiểu, cung cấp đầy đủ tài liệu."
-        spellcheck="false"
-      ></textarea>
-      <div class="textarea-counter">
-        <span id="charCount">0</span> ký tự
+      <div class="section-content" id="contentApi">
+        <div class="api-key-row">
+          <input
+            type="password"
+            id="apiKeyInput"
+            placeholder="AIzaSy..."
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <button id="saveKeyBtn" class="btn-save" data-state="idle" title="Lưu API Key">
+            <svg class="btn-save__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            <svg class="btn-save__check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span class="btn-save__text">Lưu</span>
+          </button>
+        </div>
+        <div class="api-key-actions">
+          <button id="testKeyBtn" class="btn-test">
+            <svg id="testIcon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            <span id="testBtnText">Kiểm tra key</span>
+            <svg id="testSpinner" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:none">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+          </button>
+          <span id="keySavedBadge" class="key-badge">Đã lưu</span>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Start Button -->
-    <button id="startBtn" class="btn-primary">
-      <span class="btn-text">Điền form bằng AI</span>
-      <span class="btn-spinner" id="spinner">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+    <!-- ═══════════════════════════════════════════════════
+         SECTION 2: HISTORY & INPUT (Collapsible)
+    ═══════════════════════════════════════════════════ -->
+    <section class="section">
+      <button class="section-toggle" id="sectionHistory" aria-expanded="true">
+        <span class="section-toggle__label">
+          <svg class="section-toggle__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Lịch sử nhận xét
+          <span id="historyCount" class="history-badge" style="display:none">0</span>
+        </span>
+        <svg class="section-toggle__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
         </svg>
-      </span>
-    </button>
+      </button>
 
-    <!-- Status Messages -->
-    <div id="statusBox" class="status-box"></div>
+      <div class="section-content" id="contentHistory">
+        <!-- History Dropdown -->
+        <div class="history-dropdown-wrapper">
+          <select id="historySelect" class="history-select">
+            <option value="">— Chọn nhận xét đã lưu —</option>
+          </select>
+          <button id="clearHistoryBtn" class="btn-clear-history" title="Xóa lịch sử">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Review Textarea -->
+        <div class="textarea-wrapper">
+          <textarea
+            id="reviewText"
+            placeholder="Nhập nhận xét của bạn về giảng viên...&#10;&#10;Ví dụ: Giảng viên nhiệt tình, giảng bài dễ hiểu, cung cấp đầy đủ tài liệu."
+            spellcheck="false"
+          ></textarea>
+          <div class="textarea-footer">
+            <span class="textarea-counter"><span id="charCount">0</span> ký tự</span>
+            <button id="clearTextBtn" class="btn-clear-text" title="Xóa nhận xét" style="display:none">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+              Xóa
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════
+         SECTION 3: ACTION & EXPORT
+    ═══════════════════════════════════════════════════ -->
+    <section class="section">
+      <button class="section-toggle" id="sectionAction" aria-expanded="true">
+        <span class="section-toggle__label">
+          <svg class="section-toggle__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          Thao tác
+        </span>
+        <svg class="section-toggle__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+
+      <div class="section-content" id="contentAction">
+        <!-- Auto Fill Button -->
+        <button id="startBtn" class="btn-primary">
+          <span class="btn-text">Điền form bằng AI</span>
+          <span class="btn-spinner" id="spinner">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+          </span>
+        </button>
+
+        <!-- Export Button -->
+        <button id="exportBtn" class="btn-export" disabled title="Xuất kết quả ra file CSV">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Xuất kết quả (.csv)
+        </button>
+
+        <!-- Status Messages -->
+        <div id="statusBox" class="status-box"></div>
+      </div>
+    </section>
+
   </div>
+
+  <!-- Hidden link for CSV download (manipulated via JS) -->
+  <a id="downloadLink" style="display:none"></a>
 
   <script src="popup.js"></script>
 </body>
