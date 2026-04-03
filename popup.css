@@ -528,6 +528,161 @@ textarea:disabled {
 .btn-primary.loading .btn-spinner { display: flex; }
 
 /* ============================================================
+   QUICK SELECT BUTTONS
+   ============================================================ */
+.quick-select-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.quick-select-label svg {
+  color: var(--warning);
+}
+
+.quick-select-group {
+  display: flex;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1.5px solid var(--border);
+  height: 38px;
+}
+
+.quick-btn {
+  flex: 1;
+  border: none;
+  background: var(--surface);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s, transform 0.1s;
+  position: relative;
+}
+
+.quick-btn:not(:last-child) {
+  border-right: 1.5px solid var(--border);
+}
+
+.quick-btn:hover:not(:disabled) {
+  transform: scale(1.03);
+  z-index: 1;
+}
+
+.quick-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.quick-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Active/pressed state — scale up + shadow */
+.quick-btn.active {
+  transform: scale(1.05);
+  z-index: 2;
+}
+
+/* Score 1 — Red (Rất không hài lòng) */
+.quick-btn--1 {
+  color: #991b1b;
+  background: #fef2f2;
+}
+.quick-btn--1:hover:not(:disabled) {
+  background: #fee2e2;
+}
+.quick-btn--1.active {
+  background: #ef4444;
+  color: white;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
+}
+
+/* Score 2 — Orange-Red (Không hài lòng) */
+.quick-btn--2 {
+  color: #9a3412;
+  background: #fff7ed;
+}
+.quick-btn--2:hover:not(:disabled) {
+  background: #ffedd5;
+}
+.quick-btn--2.active {
+  background: #f97316;
+  color: white;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.3);
+}
+
+/* Score 3 — Yellow (Phân vân) */
+.quick-btn--3 {
+  color: #92400e;
+  background: #fffbeb;
+}
+.quick-btn--3:hover:not(:disabled) {
+  background: #fef3c7;
+}
+.quick-btn--3.active {
+  background: #f59e0b;
+  color: white;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+}
+
+/* Score 4 — Teal (Hài lòng) */
+.quick-btn--4 {
+  color: #0f766e;
+  background: #f0fdfa;
+}
+.quick-btn--4:hover:not(:disabled) {
+  background: #ccfbf1;
+}
+.quick-btn--4.active {
+  background: #14b8a6;
+  color: white;
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.3);
+}
+
+/* Score 5 — Green (Rất hài lòng) */
+.quick-btn--5 {
+  color: #166534;
+  background: #f0fdf4;
+}
+.quick-btn--5:hover:not(:disabled) {
+  background: #dcfce7;
+}
+.quick-btn--5.active {
+  background: #22c55e;
+  color: white;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+}
+
+/* ============================================================
+   ACTION DIVIDER
+   ============================================================ */
+.action-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.action-divider::before,
+.action-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ============================================================
    EXPORT BUTTON
    ============================================================ */
 .btn-export {

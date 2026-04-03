@@ -26,6 +26,9 @@ const sectionApi = document.getElementById('sectionApi');
 const sectionHistory = document.getElementById('sectionHistory');
 const sectionAction = document.getElementById('sectionAction');
 
+// Quick select buttons
+const quickSelectGroup = document.getElementById('quickSelectGroup');
+
 // ============================================================
 // STORAGE KEYS
 // ============================================================
@@ -78,6 +81,8 @@ async function saveHistory(history) {
 function setLoading(loading) {
   startBtn.disabled = loading;
   reviewTextarea.disabled = loading;
+  // Also disable/enable quick select buttons during AI processing
+  quickSelectGroup.querySelectorAll('.quick-btn').forEach((b) => (b.disabled = loading));
   if (loading) {
     startBtn.classList.add('loading');
     startBtn.querySelector('.btn-text').textContent = 'Đang xử lý AI...';
@@ -173,6 +178,61 @@ async function clearHistory() {
   await saveHistory([]);
   await loadHistoryUI();
   showStatus('Đã xóa lịch sử nhận xét.', 'info');
+}
+
+// ============================================================
+// QUICK FILL — Apply same score to ALL questions (no AI)
+// ============================================================
+async function quickFill(tabId, score) {
+  // Activate clicked button visually
+  quickSelectGroup.querySelectorAll('.quick-btn').forEach((btn) => btn.classList.remove('active'));
+  const clickedBtn = quickSelectGroup.querySelector(`[data-score="${score}"]`);
+  if (clickedBtn) clickedBtn.classList.add('active');
+
+  clearStatus();
+  showStatus(`Đang chọn nhanh điểm ${score} cho tất cả câu...`, 'info');
+
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (score) => {
+        let filled = 0;
+
+        // Find all .table-cauhoi tables and click the matching radio per question
+        const tables = document.querySelectorAll('.table-cauhoi');
+        tables.forEach((table) => {
+          // Find the radio button ending with dapanN where N = score
+          const targetRadio = table.querySelector(`input[id$="dapan${score}"]`);
+          if (targetRadio) {
+            targetRadio.click();
+            targetRadio.dispatchEvent(new Event('change', { bubbles: true }));
+            targetRadio.dispatchEvent(new Event('input', { bubbles: true }));
+            filled++;
+          }
+        });
+
+        return { filled };
+      },
+      args: [score],
+    });
+
+    const result = results[0].result;
+
+    // Clear active state after a short delay
+    setTimeout(() => {
+      quickSelectGroup.querySelectorAll('.quick-btn').forEach((btn) => btn.classList.remove('active'));
+    }, 2000);
+
+    if (result.filled === 0) {
+      showStatus('Không tìm thấy câu hỏi nào trên trang.', 'warning');
+    } else {
+      showStatus(`Đã chọn nhanh điểm ${score} cho ${result.filled} câu!`, 'success');
+    }
+  } catch (err) {
+    console.error('[QuickFill] error:', err);
+    showStatus(`Lỗi: ${err.message}`, 'error');
+    quickSelectGroup.querySelectorAll('.quick-btn').forEach((btn) => btn.classList.remove('active'));
+  }
 }
 
 // ============================================================
@@ -513,6 +573,27 @@ historySelect.addEventListener('change', async () => {
 // ============================================================
 clearHistoryBtn.addEventListener('click', async () => {
   await clearHistory();
+});
+
+// ============================================================
+// QUICK SELECT BUTTONS — Bulk fill all questions with same score
+// ============================================================
+quickSelectGroup.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.quick-btn');
+  if (!btn || btn.disabled) return;
+
+  const score = parseInt(btn.dataset.score, 10);
+
+  // Disable all quick buttons during processing
+  quickSelectGroup.querySelectorAll('.quick-btn').forEach((b) => (b.disabled = true));
+
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) throw new Error('Không tìm thấy tab hoạt động.');
+    await quickFill(tab.id, score);
+  } finally {
+    quickSelectGroup.querySelectorAll('.quick-btn').forEach((b) => (b.disabled = false));
+  }
 });
 
 // ============================================================
