@@ -1,0 +1,21 @@
+# Chrome Extension build artifacts
+*.crx
+*.pem
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Node (if you ever add npm tooling)
+node_modules/
+npm-debug.log*
